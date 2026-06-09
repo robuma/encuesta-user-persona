@@ -68,12 +68,12 @@ export function SurveyPage() {
       </section>
       <ProgressHeader step={step} percent={percent} onStep={goTo} />
       <main className="survey-content">
-        {sections.map((section) => <section key={section} className="survey-section"><div className="section-heading"><span>Sección {section}</span><h2>{sectionTitles[section]}</h2>{section >= 2 && section <= 6 && <p>Usá la escala de 1 (Totalmente en desacuerdo) a 5 (Totalmente de acuerdo).</p>}</div>{stepQuestions.filter((question) => question.section === section).map((question) => <QuestionCard key={question.id} question={question} answer={answers[question.id]} invalid={invalid.includes(question.id)} onChange={(answer) => changeAnswer(question.id, answer)} />)}</section>)}
+        {sections.map((section) => <section key={section} className="survey-section"><div className="section-heading"><span>Sección {section + 1}</span><h2>{sectionTitles[section]}</h2>{section >= 2 && section <= 6 && <p>Usá la escala de 1 (Totalmente en desacuerdo) a 5 (Totalmente de acuerdo).</p>}</div>{stepQuestions.filter((question) => question.section === section).map((question) => <QuestionCard key={question.id} question={question} answer={answers[question.id]} invalid={invalid.includes(question.id)} onChange={(answer) => changeAnswer(question.id, answer)} />)}</section>)}
         {!isSupabaseConfigured && <p className="config-warning">Modo de demostración: configurá las variables de Supabase para habilitar el envío.</p>}
         {error && <p className="submit-error" role="alert">{error}</p>}
         <div className="survey-actions">{step > 0 && <button className="secondary" onClick={() => goTo(step - 1)}>Anterior</button>}<span />{step < 3 ? <button onClick={() => goTo(step + 1)}>Continuar</button> : <button disabled={status === 'sending' || !isSupabaseConfigured} onClick={send}>{status === 'sending' ? 'Enviando…' : 'Enviar respuestas'}</button>}</div>
       </main>
-      <footer>Investigación académica · Encuesta anónima</footer>
+      <footer>Curso PF-3855 | Desarrollo de Software Centrado en el Humano</footer>
     </div>
   )
 }

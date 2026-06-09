@@ -21,7 +21,9 @@ describe('survey confirmation', () => {
     expect(screen.getByText(/Esta encuesta forma parte de un trabajo de investigación/)).toBeInTheDocument()
     expect(screen.getByText(/Por favor, responde con sinceridad/)).toBeInTheDocument()
     expect(screen.queryByText(/no solicitamos nombre/)).not.toBeInTheDocument()
-    expect(screen.getByRole('contentinfo')).toHaveTextContent('Investigación académica · Encuesta anónima')
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('Curso PF-3855 | Desarrollo de Software Centrado en el Humano')
+    expect(screen.getByText('Sección 1')).toBeInTheDocument()
+    expect(screen.queryByText('Sección 0')).not.toBeInTheDocument()
   })
 
   it('shows a centered thank-you message without a second-response button', async () => {
