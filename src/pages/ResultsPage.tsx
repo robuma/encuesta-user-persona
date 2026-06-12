@@ -16,7 +16,9 @@ import {
 } from "../domain/dates";
 import {
   filterResponses,
+  filterableQuestions,
   likertDistribution,
+  observedAnswerOptions,
   observedDistribution,
   optionDistribution,
   responsesToCsv,
@@ -63,14 +65,19 @@ export function ResultsPage() {
     [responses, selectedVersion],
   );
   const filtered = useMemo(
-    () => filterResponses(versionResponses, filters),
-    [versionResponses, filters],
+    () => filterResponses(versionResponses, filters, survey.questions),
+    [versionResponses, filters, survey.questions],
   );
   const characterizationQuestions = survey.questions.filter((question) => question.section === 0);
-  const filterQuestions = characterizationQuestions.filter((question) => question.options?.length);
+  const filterQuestions = filterableQuestions(survey.questions);
   const filterQuestion = filterQuestions.find(
     (question) => question.id === filters.questionId,
   );
+  const filterOptionResponses = useMemo(
+    () => filterResponses(versionResponses, { ...filters, questionId: "", value: "" }, survey.questions),
+    [versionResponses, filters.from, filters.to, survey.questions],
+  );
+  const filterOptions = filterQuestion ? observedAnswerOptions(filterOptionResponses, filterQuestion) : [];
   const chartQuestions = survey.questions.filter(
     (question) => question.type !== "open",
   );
@@ -170,7 +177,7 @@ export function ResultsPage() {
               onChange={(e) => setFilter("value", e.target.value)}
             >
               <option value="">Todas</option>
-              {filterQuestion?.options?.map((option) => (
+              {filterOptions.map((option) => (
                 <option key={option}>{option}</option>
               ))}
             </select>

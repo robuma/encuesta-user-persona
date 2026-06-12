@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { observedDistribution, responsesToCsv, filterResponses, likertDistribution } from './results'
+import { filterableQuestions, observedAnswerOptions, observedDistribution, responsesToCsv, filterResponses, likertDistribution } from './results'
 import { questions } from './questions'
 import type { SurveyQuestion, SurveyResponse } from './types'
 
@@ -77,6 +77,42 @@ describe('dashboard calculations', () => {
       { option: 'Alajuela', count: 1 },
       { option: 'San José', count: 2 },
     ])
+    expect(observedAnswerOptions(residenceResponses, residenceQuestion)).toEqual(['Alajuela', 'San José'])
+    expect(filterResponses(residenceResponses, { from: '', to: '', questionId: 'd03', value: 'San José' }, [residenceQuestion])).toHaveLength(2)
     expect(responsesToCsv(residenceResponses, [residenceQuestion])).toContain('San José > San José > Carmen')
+  })
+
+  it('only offers multiple-selection options that were actually answered', () => {
+    const equipmentQuestion: SurveyQuestion = {
+      id: 'd04',
+      number: 4,
+      section: 0,
+      step: 0,
+      type: 'multi',
+      text: 'Equipo',
+      options: ['Portátil', 'Tableta', 'Celular'],
+    }
+    const equipmentResponses: SurveyResponse[] = [
+      { id: '7', survey_version: '2.0', submitted_at: '2026-06-03T12:00:00Z', answers: { d04: ['Portátil', 'Celular'] } },
+    ]
+
+    expect(observedAnswerOptions(equipmentResponses, equipmentQuestion)).toEqual(['Celular', 'Portátil'])
+  })
+
+  it('includes all categorical characterization questions from survey 1 in filters', () => {
+    expect(filterableQuestions(questions).map((question) => question.id)).toEqual([
+      'q01', 'q02', 'q03', 'q04', 'q05', 'q06', 'q07', 'q08', 'q09', 'q10', 'q11', 'q12',
+    ])
+  })
+
+  it('offers and filters only observed conditional answer values', () => {
+    const genderQuestion = questions.find((question) => question.id === 'q05')!
+    const genderResponses: SurveyResponse[] = [
+      { id: '8', survey_version: '1.0', submitted_at: '2026-06-03T12:00:00Z', answers: { q05: { value: 'Otro', detail: 'No binario' } } },
+      { id: '9', survey_version: '1.0', submitted_at: '2026-06-03T12:00:00Z', answers: { q05: { value: 'Mujer' } } },
+    ]
+
+    expect(observedAnswerOptions(genderResponses, genderQuestion)).toEqual(['Mujer', 'Otro'])
+    expect(filterResponses(genderResponses, { from: '', to: '', questionId: 'q05', value: 'Otro' }, [genderQuestion])).toHaveLength(1)
   })
 })

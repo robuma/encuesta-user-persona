@@ -2,12 +2,20 @@ import { costaRicaDateKey } from './dates'
 import { answerValue } from './survey'
 import type { Answer, QuestionId, ResultFilters, SurveyQuestion, SurveyResponse } from './types'
 
-export function filterResponses(responses: SurveyResponse[], filters: ResultFilters): SurveyResponse[] {
+const filterableTypes = new Set<SurveyQuestion['type']>(['single', 'multi', 'conditional', 'select', 'location'])
+
+export function filterableQuestions(questions: SurveyQuestion[]): SurveyQuestion[] {
+  return questions.filter((question) => filterableTypes.has(question.type))
+}
+
+export function filterResponses(responses: SurveyResponse[], filters: ResultFilters, questions: SurveyQuestion[] = []): SurveyResponse[] {
   return responses.filter((response) => {
     const date = costaRicaDateKey(response.submitted_at)
     if (filters.from && date < filters.from) return false
     if (filters.to && date > filters.to) return false
-    const value = filters.questionId ? answerValue(response.answers[filters.questionId]) : undefined
+    const question = questions.find((item) => item.id === filters.questionId)
+    const rawValue = filters.questionId ? answerValue(response.answers[filters.questionId]) : undefined
+    const value = question && !Array.isArray(rawValue) ? resultAnswerValue(question, rawValue) : rawValue
     if (filters.questionId && filters.value && (Array.isArray(value) ? !value.includes(filters.value) : String(value) !== filters.value)) return false
     return true
   })
@@ -46,6 +54,20 @@ export function observedDistribution(responses: SurveyResponse[], question: Surv
   return [...counts.entries()]
     .sort(([a], [b]) => a.localeCompare(b, 'es', { numeric: true }))
     .map(([option, count]) => ({ option, count }))
+}
+
+export function observedAnswerOptions(responses: SurveyResponse[], question: SurveyQuestion): string[] {
+  const options = new Set<string>()
+  responses.forEach((response) => {
+    const value = answerValue(response.answers[question.id])
+    if (Array.isArray(value)) {
+      value.forEach((item) => options.add(item))
+    } else {
+      const displayed = resultAnswerValue(question, value)
+      if (displayed) options.add(displayed)
+    }
+  })
+  return [...options].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
 }
 
 const csvCell = (value: unknown) => {
