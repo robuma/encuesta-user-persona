@@ -23,4 +23,10 @@ describe('document titles', () => {
     render(<App />)
     await waitFor(() => expect(document.title).toBe('Resultados Encuesta'))
   })
+
+  it('uses Encuesta User Persona for the persona route', async () => {
+    location.hash = '#/persona'
+    render(<App />)
+    await waitFor(() => expect(document.title).toBe('Encuesta User Persona'))
+  })
 })

@@ -1,6 +1,4 @@
-const labels = ['Contexto', 'Experiencia y motivación', 'Aprendizaje', 'Apoyo y reflexión']
-
-export function ProgressHeader({ step, percent, onStep }: { step: number; percent: number; onStep: (step: number) => void }) {
+export function ProgressHeader({ step, percent, labels, onStep }: { step: number; percent: number; labels: string[]; onStep: (step: number) => void }) {
   return (
     <header className="progress-header">
       <div className="progress-copy"><strong>{percent}% completado</strong></div>

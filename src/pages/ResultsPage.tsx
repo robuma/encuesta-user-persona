@@ -15,17 +15,14 @@ import {
   formatCostaRicaDateTime,
 } from "../domain/dates";
 import {
-  characterizationQuestions,
-  questions,
-  sectionTitles,
-} from "../domain/questions";
-import {
   filterResponses,
   likertDistribution,
+  observedDistribution,
   optionDistribution,
   responsesToCsv,
 } from "../domain/results";
 import { answerValue } from "../domain/survey";
+import { surveyOne, surveys, surveyByVersion } from "../domain/surveys";
 import type { ResultFilters, SurveyResponse } from "../domain/types";
 import { fetchResponses } from "../lib/supabase";
 
@@ -35,19 +32,21 @@ const initialFilters: ResultFilters = {
   questionId: "",
   value: "",
 };
-const downloadCsv = (responses: SurveyResponse[]) => {
-  const blob = new Blob([`\uFEFF${responsesToCsv(responses)}`], {
+const displayAnswer = (value: unknown) => Array.isArray(value) ? value.join(", ") : String(value ?? "")
+const downloadCsv = (responses: SurveyResponse[], questions: typeof surveyOne.questions, version: string) => {
+  const blob = new Blob([`\uFEFF${responsesToCsv(responses, questions)}`], {
     type: "text/csv;charset=utf-8",
   });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `resultados-encuesta-${costaRicaDateKey(new Date().toISOString())}.csv`;
+  link.download = `resultados-encuesta-${version}-${costaRicaDateKey(new Date().toISOString())}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
 };
 
 export function ResultsPage() {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState("1.0");
   const [filters, setFilters] = useState(initialFilters);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   useEffect(() => {
@@ -58,17 +57,24 @@ export function ResultsPage() {
       })
       .catch(() => setState("error"));
   }, []);
-  const filtered = useMemo(
-    () => filterResponses(responses, filters),
-    [responses, filters],
+  const survey = surveyByVersion(selectedVersion);
+  const versionResponses = useMemo(
+    () => responses.filter((response) => response.survey_version === selectedVersion),
+    [responses, selectedVersion],
   );
-  const filterQuestion = characterizationQuestions.find(
+  const filtered = useMemo(
+    () => filterResponses(versionResponses, filters),
+    [versionResponses, filters],
+  );
+  const characterizationQuestions = survey.questions.filter((question) => question.section === 0);
+  const filterQuestions = characterizationQuestions.filter((question) => question.options?.length);
+  const filterQuestion = filterQuestions.find(
     (question) => question.id === filters.questionId,
   );
-  const chartQuestions = questions.filter(
+  const chartQuestions = survey.questions.filter(
     (question) => question.type !== "open",
   );
-  const openQuestions = questions.filter(
+  const openQuestions = survey.questions.filter(
     (question) => question.type === "open",
   );
   const setFilter = (key: keyof ResultFilters, value: string) =>
@@ -105,28 +111,30 @@ export function ResultsPage() {
           <h1>Resultados de la encuesta</h1>
           <p>Vista de gráficos y resultados por pregunta</p>
         </div>
-        <button onClick={() => downloadCsv(filtered)}>Exportar a CSV</button>
+        <button onClick={() => downloadCsv(filtered, survey.questions, selectedVersion)}>Exportar a CSV</button>
       </header>
       <main className="dashboard-content">
         <section className="metrics">
+          <article className="questionnaire-metric">
+            <label htmlFor="survey-version">Cuestionario</label>
+            <select id="survey-version" value={selectedVersion} onChange={(event) => { setSelectedVersion(event.target.value); setFilters(initialFilters) }}>
+              {surveys.map((item) => <option key={item.version} value={item.version}>{item.name}</option>)}
+            </select>
+            <small>Resultados mostrados</small>
+          </article>
           <article>
             <span>Respuestas visibles</span>
             <strong>{filtered.length}</strong>
-            <small>de {responses.length} recibidas</small>
+            <small>de {versionResponses.length} recibidas</small>
           </article>
           <article>
             <span>Último envío</span>
             <strong>
-              {responses[0]
-                ? formatCostaRicaDate(responses[0].submitted_at)
+              {versionResponses[0]
+                ? formatCostaRicaDate(versionResponses[0].submitted_at)
                 : "—"}
             </strong>
             <small>Fecha más reciente</small>
-          </article>
-          <article>
-            <span>Completitud</span>
-            <strong>100%</strong>
-            <small>Encuestas enviadas completas</small>
           </article>
         </section>
         <section className="filters">
@@ -147,9 +155,9 @@ export function ResultsPage() {
               onChange={(e) => setFilter("questionId", e.target.value)}
             >
               <option value="">Todas</option>
-              {characterizationQuestions.map((question) => (
+              {filterQuestions.map((question) => (
                 <option key={question.id} value={question.id}>
-                  {question.number}. {question.text}
+                  {question.label ?? question.number}. {question.text}
                 </option>
               ))}
             </select>
@@ -174,7 +182,7 @@ export function ResultsPage() {
             Limpiar filtros
           </button>
         </section>
-        {responses.length === 0 ? (
+        {versionResponses.length === 0 ? (
           <section className="empty">
             <h2>Aún no hay respuestas</h2>
             <p>
@@ -193,7 +201,9 @@ export function ResultsPage() {
                 {chartQuestions.map((question) => {
                   const isLikert = question.type === "likert";
                   const data = isLikert
-                    ? likertDistribution(filtered, question.id)
+                    ? likertDistribution(filtered, question.id, question.options?.length ?? 5)
+                    : question.chartOptions === "observed"
+                      ? observedDistribution(filtered, question)
                     : optionDistribution(
                         filtered,
                         question.id,
@@ -205,7 +215,7 @@ export function ResultsPage() {
                       key={question.id}
                     >
                       <h3>
-                        {question.number}. {question.text}
+                        {question.label ?? question.number}. {question.text}
                       </h3>
                       {isLikert ? (
                         <ResponsiveContainer width="100%" height={235}>
@@ -291,7 +301,7 @@ export function ResultsPage() {
               {openQuestions.map((question) => (
                 <details key={question.id} className="open-responses">
                   <summary>
-                    {question.number}. {question.text}
+                          {question.label ?? question.number}. {question.text}
                     <span>{filtered.length} respuestas</span>
                   </summary>
                   <div>
@@ -320,7 +330,7 @@ export function ResultsPage() {
                       <th>Versión</th>
                       {characterizationQuestions.slice(0, 5).map((q) => (
                         <th key={q.id}>
-                          {q.number}. {sectionTitles[q.section]}
+                          {q.label ?? q.number}. {survey.sectionTitles[q.section]}
                         </th>
                       ))}
                     </tr>
@@ -334,7 +344,7 @@ export function ResultsPage() {
                         <td>{response.survey_version}</td>
                         {characterizationQuestions.slice(0, 5).map((q) => (
                           <td key={q.id}>
-                            {String(answerValue(response.answers[q.id]) ?? "")}
+                            {displayAnswer(answerValue(response.answers[q.id]))}
                           </td>
                         ))}
                       </tr>

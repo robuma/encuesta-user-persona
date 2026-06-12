@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { filterResponses, likertDistribution, responsesToCsv } from './results'
-import type { SurveyResponse } from './types'
+import { observedDistribution, responsesToCsv, filterResponses, likertDistribution } from './results'
+import { questions } from './questions'
+import type { SurveyQuestion, SurveyResponse } from './types'
 
 const responses: SurveyResponse[] = [
   { id: '1', survey_version: '1.0', submitted_at: '2026-06-01T12:00:00Z', answers: { q01: 'Sí', q13: 5, q41: 'Practicar' } },
@@ -24,9 +25,37 @@ describe('dashboard calculations', () => {
     ])
   })
 
+  it('builds a seven-point Likert distribution', () => {
+    expect(likertDistribution([], 'b01', 7)).toHaveLength(7)
+  })
+
   it('exports a spreadsheet-compatible CSV', () => {
-    const csv = responsesToCsv(responses)
+    const csv = responsesToCsv(responses, questions)
     expect(csv).toContain('"id","submitted_at","q01"')
     expect(csv).toContain('"Practicar"')
+  })
+
+  it('groups standardized residence answers by province while preserving full CSV values', () => {
+    const residenceQuestion: SurveyQuestion = {
+      id: 'd03',
+      number: 3,
+      section: 0,
+      step: 0,
+      type: 'location',
+      text: 'Residencia',
+      chartOptions: 'observed',
+      resultValue: 'province',
+    }
+    const residenceResponses: SurveyResponse[] = [
+      { id: '3', survey_version: '2.0', submitted_at: '2026-06-03T12:00:00Z', answers: { d03: 'San José > San José > Carmen' } },
+      { id: '4', survey_version: '2.0', submitted_at: '2026-06-03T12:00:00Z', answers: { d03: 'Alajuela > Alajuela > Carmen' } },
+      { id: '5', survey_version: '2.0', submitted_at: '2026-06-03T12:00:00Z', answers: { d03: 'San José > San José > Catedral' } },
+    ]
+
+    expect(observedDistribution(residenceResponses, residenceQuestion)).toEqual([
+      { option: 'Alajuela', count: 1 },
+      { option: 'San José', count: 2 },
+    ])
+    expect(responsesToCsv(residenceResponses, [residenceQuestion])).toContain('San José > San José > Carmen')
   })
 })

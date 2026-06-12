@@ -12,5 +12,7 @@ describe('results page header', () => {
 
     expect(await screen.findByText('Panel de resultados')).toBeInTheDocument()
     expect(screen.getByText('Vista de gráficos y resultados por pregunta')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Encuesta 1.0 · Grupo Manfred' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Encuesta 2.0 · Grupo Hansell' })).toBeInTheDocument()
   })
 })

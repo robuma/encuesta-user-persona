@@ -6,9 +6,9 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 export const isSupabaseConfigured = Boolean(url && key)
 const supabase = isSupabaseConfigured ? createClient(url!, key!) : null
 
-export async function submitSurvey(answers: SurveyAnswers) {
+export async function submitSurvey(answers: SurveyAnswers, surveyVersion = '1.0') {
   if (!supabase) throw new Error('Supabase no está configurado.')
-  const { error } = await supabase.from('survey_responses').insert({ survey_version: '1.0', answers })
+  const { error } = await supabase.from('survey_responses').insert({ survey_version: surveyVersion, answers })
   if (error) throw error
 }
 

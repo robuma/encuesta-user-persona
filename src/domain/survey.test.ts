@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { questions } from './questions'
+import { personaQuestions } from './personaQuestions'
 import { completionPercent, isQuestionComplete, validateStep } from './survey'
 import type { SurveyAnswers } from './types'
 
@@ -23,10 +24,23 @@ describe('survey validation', () => {
 
   it('calculates progress across all questions', () => {
     const answers: SurveyAnswers = { q01: 'Sí', q02: 'Sí' }
-    expect(completionPercent(answers)).toBe(5)
+    expect(completionPercent(questions, answers)).toBe(5)
   })
 
   it('returns incomplete question ids for a step', () => {
-    expect(validateStep(0, { q01: 'Sí' })).toContain('q02')
+    expect(validateStep(questions, 0, { q01: 'Sí' })).toContain('q02')
+  })
+
+  it('supports seven-point Likert and multiple-selection questions', () => {
+    expect(isQuestionComplete(personaQuestions[6], { b01: 7 })).toBe(true)
+    expect(isQuestionComplete(personaQuestions[6], { b01: 8 })).toBe(false)
+    expect(isQuestionComplete(personaQuestions[3], { d04: ['Portátil', 'Celular'] })).toBe(true)
+  })
+
+  it('validates standardized age and residence answers', () => {
+    expect(isQuestionComplete(personaQuestions[1], { d02: '17' })).toBe(true)
+    expect(isQuestionComplete(personaQuestions[1], { d02: '16' })).toBe(false)
+    expect(isQuestionComplete(personaQuestions[2], { d03: 'San José > San José > Carmen' })).toBe(true)
+    expect(isQuestionComplete(personaQuestions[2], { d03: 'San José' })).toBe(false)
   })
 })
