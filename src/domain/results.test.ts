@@ -35,6 +35,27 @@ describe('dashboard calculations', () => {
     expect(csv).toContain('"Practicar"')
   })
 
+  it('exports multiple-selection answers as a readable list', () => {
+    const equipmentQuestion: SurveyQuestion = {
+      id: 'd04',
+      number: 4,
+      section: 0,
+      step: 0,
+      type: 'multi',
+      text: 'Equipo',
+      options: ['Portátil', 'Celular'],
+    }
+    const multipleResponse: SurveyResponse = {
+      id: '6',
+      survey_version: '2.0',
+      submitted_at: '2026-06-03T12:00:00Z',
+      answers: { d04: ['Portátil', 'Celular'] },
+    }
+
+    expect(responsesToCsv([multipleResponse], [equipmentQuestion])).toContain('"Portátil; Celular"')
+    expect(responsesToCsv([multipleResponse], [equipmentQuestion])).not.toContain('undefined')
+  })
+
   it('groups standardized residence answers by province while preserving full CSV values', () => {
     const residenceQuestion: SurveyQuestion = {
       id: 'd03',

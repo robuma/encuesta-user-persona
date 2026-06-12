@@ -49,7 +49,11 @@ export function observedDistribution(responses: SurveyResponse[], question: Surv
 }
 
 const csvCell = (value: unknown) => {
-  const normalized = typeof value === 'object' && value !== null ? `${(value as { value: string }).value}${(value as { detail?: string }).detail ? `: ${(value as { detail?: string }).detail}` : ''}` : value ?? ''
+  const normalized = Array.isArray(value)
+    ? value.join('; ')
+    : typeof value === 'object' && value !== null
+      ? `${(value as { value: string }).value}${(value as { detail?: string }).detail ? `: ${(value as { detail?: string }).detail}` : ''}`
+      : value ?? ''
   return `"${String(normalized).replaceAll('"', '""')}"`
 }
 
